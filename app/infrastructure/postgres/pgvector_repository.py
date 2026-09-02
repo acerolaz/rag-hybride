@@ -18,7 +18,6 @@ class PgVectorRepository:
                 self._session.add(row)
             apply_chunk_fields(row, chunk)
             row.embedding = embedding
-        await self._session.commit()
 
     async def search(
         self, embedding: list[float], top_k: int, product_ref: str | None = None
@@ -33,4 +32,3 @@ class PgVectorRepository:
 
     async def delete_by_document_id(self, document_id: str) -> None:
         await self._session.execute(delete(ChunkRow).where(ChunkRow.document_id == document_id))
-        await self._session.commit()

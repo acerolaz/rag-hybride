@@ -17,11 +17,11 @@ class Base(DeclarativeBase):
 class DocumentRow(Base):
     __tablename__ = "documents"
 
-    product_ref: Mapped[PrimaryKeyStr]
+    product_ref: Mapped[str] = mapped_column(String, primary_key=True)
+    document_type: Mapped[str] = mapped_column(String, primary_key=True)
     title: Mapped[str]
     version: Mapped[str]
     status: Mapped[str] = mapped_column(String, index=True)
-    document_type: Mapped[str]
     published_date: Mapped[date]
     source_path: Mapped[str]
     content_hash: Mapped[str]

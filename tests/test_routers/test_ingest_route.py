@@ -13,7 +13,7 @@ class FakeUseCase:
         self._result = result
         self._error = error
 
-    async def execute(self, raw_bytes, filename, document_type):
+    async def execute(self, raw_bytes, filename, document_type, product_ref_override=None):
         if self._error is not None:
             raise self._error
         return self._result
@@ -57,5 +57,5 @@ async def test_ingest_route_returns_422_on_unsupported_format():
 
     # Assert
     assert response.status_code == 422
-    assert response.json()["detail"]["error_code"] == "UNSUPPORTED_FORMAT"
+    assert response.json()["error_code"] == "UNSUPPORTED_FORMAT"
     app.dependency_overrides.clear()

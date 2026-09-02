@@ -30,7 +30,13 @@ class IngestDocumentUseCase:
     vector_store: VectorStorePort
     lexical_search: LexicalSearchPort
 
-    async def execute(self, raw_bytes: bytes, filename: str, document_type: str) -> IngestResult:
+    async def execute(
+        self,
+        raw_bytes: bytes,
+        filename: str,
+        document_type: str,
+        product_ref_override: str | None = None,
+    ) -> IngestResult:
         extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
         parser = self.parsers.get(extension)
         if parser is None:
@@ -38,9 +44,17 @@ class IngestDocumentUseCase:
 
         content_hash = hashlib.sha256(raw_bytes).hexdigest()
         document, raw_sections = parser.parse(raw_bytes, document_type, filename)
+        if product_ref_override is not None:
+            document = replace(
+                document,
+                product_ref=product_ref_override,
+                id=f"{product_ref_override}::{document_type}",
+            )
         document = replace(document, content_hash=content_hash)
 
-        existing_hash = await self.registry.get_active_hash(document.product_ref)
+        existing_hash = await self.registry.get_active_hash(
+            document.product_ref, document.document_type
+        )
         action = resolve_ingest_action(existing_hash, content_hash)
 
         if action == "unchanged":
@@ -49,7 +63,7 @@ class IngestDocumentUseCase:
         if action == "updated":
             await self.vector_store.delete_by_document_id(document.id)
             await self.lexical_search.delete_by_document_id(document.id)
-            await self.registry.deprecate(document.product_ref)
+            await self.registry.deprecate(document.product_ref, document.document_type)
 
         chunk_candidates = chunk_sections(raw_sections)
         chunks = [

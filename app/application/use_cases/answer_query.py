@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 
-from app.domain.confidence import classify_confidence
+from app.domain.confidence import LOW_CONFIDENCE_THRESHOLD, classify_confidence
 from app.domain.fusion import RankedChunk, reciprocal_rank_fusion
 from app.domain.models import Answer, Chunk, Citation
 from app.domain.ports import (
@@ -13,7 +13,7 @@ from app.domain.ports import (
 )
 
 RERANK_TOP_N = 10
-CITATION_SCORE_FLOOR = 0.4
+CITATION_SCORE_FLOOR = LOW_CONFIDENCE_THRESHOLD
 MAX_CITATIONS = 5
 REFUSAL_TEXT = "Je ne trouve pas cette information dans le corpus."
 
@@ -37,9 +37,7 @@ class AnswerQueryUseCase:
         for chunk, _rank in (*dense_results, *sparse_results):
             chunks_by_id[chunk.id] = chunk
 
-        dense_ranked = [
-            RankedChunk(chunk_id=chunk.id, rank=rank) for chunk, rank in dense_results
-        ]
+        dense_ranked = [RankedChunk(chunk_id=chunk.id, rank=rank) for chunk, rank in dense_results]
         sparse_ranked = [
             RankedChunk(chunk_id=chunk.id, rank=rank) for chunk, rank in sparse_results
         ]
@@ -61,12 +59,10 @@ class AnswerQueryUseCase:
         if confidence == "refused":
             return Answer(text=REFUSAL_TEXT, citations=[], confidence="refused")
 
-        cited_chunks = [
-            chunk for chunk, score in reranked if score >= CITATION_SCORE_FLOOR
-        ][:MAX_CITATIONS]
-        text = await self.llm.generate(
-            query, cited_chunks, hedge=(confidence == "low")
-        )
+        cited_chunks = [chunk for chunk, score in reranked if score >= CITATION_SCORE_FLOOR][
+            :MAX_CITATIONS
+        ]
+        text = await self.llm.generate(query, cited_chunks, hedge=(confidence == "low"))
         citations = [
             Citation(
                 title=c.title,

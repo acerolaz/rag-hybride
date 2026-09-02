@@ -18,7 +18,6 @@ class Bm25Repository:
                 self._session.add(row)
             apply_chunk_fields(row, chunk)
             row.search_vector = func.to_tsvector("french", chunk.content)
-        await self._session.commit()
 
     async def search(
         self, query: str, top_k: int, product_ref: str | None = None
@@ -38,4 +37,3 @@ class Bm25Repository:
 
     async def delete_by_document_id(self, document_id: str) -> None:
         await self._session.execute(delete(ChunkRow).where(ChunkRow.document_id == document_id))
-        await self._session.commit()

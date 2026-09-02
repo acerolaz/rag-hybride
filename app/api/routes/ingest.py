@@ -1,11 +1,8 @@
-import uuid
-
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from app.api.schemas.ingest import IngestResponse
 from app.application.use_cases.ingest_document import IngestDocumentUseCase
 from app.dependencies import get_ingest_document_use_case
-from app.domain.errors import UnparsableDocumentError, UnsupportedFormatError
 
 router = APIRouter(prefix="/api/v1", tags=["ingest"])
 
@@ -14,30 +11,18 @@ router = APIRouter(prefix="/api/v1", tags=["ingest"])
 async def ingest_document(
     document_type: str = Form(...),
     file: UploadFile = File(...),
+    product_ref: str | None = Form(default=None),
     use_case: IngestDocumentUseCase = Depends(get_ingest_document_use_case),
 ) -> IngestResponse:
-    """Ingest a source document (Markdown or PDF) into the dual dense/lexical index."""
+    """Ingest a source document (Markdown or PDF) into the dual dense/lexical index.
+
+    `product_ref` is an optional explicit override of the product reference,
+    useful for PDFs which have no structured frontmatter to extract one from.
+    """
     raw_bytes = await file.read()
-    try:
-        result = await use_case.execute(raw_bytes, file.filename or "", document_type)
-    except UnsupportedFormatError as exc:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "error_code": "UNSUPPORTED_FORMAT",
-                "message": str(exc),
-                "correlation_id": str(uuid.uuid4()),
-            },
-        ) from exc
-    except UnparsableDocumentError as exc:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "error_code": "UNPARSABLE_DOCUMENT",
-                "message": str(exc),
-                "correlation_id": str(uuid.uuid4()),
-            },
-        ) from exc
+    result = await use_case.execute(
+        raw_bytes, file.filename or "", document_type, product_ref_override=product_ref
+    )
     return IngestResponse(
         document_id=result.document_id, chunk_count=result.chunk_count, status=result.status
     )

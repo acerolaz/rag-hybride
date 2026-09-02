@@ -27,9 +27,7 @@ def chunk_sections(sections: list[RawSection]) -> list[ChunkCandidate]:
     total_tokens = sum(estimate_tokens(s.content) for s in sections)
     if total_tokens < TINY_DOCUMENT_TOKENS:
         combined = "\n\n".join(s.content for s in sections)
-        is_single_table = (
-            len(sections) == 1 and sections[0].content_type == "table"
-        )
+        is_single_table = len(sections) == 1 and sections[0].content_type == "table"
         content_type = "table" if is_single_table else "text"
         return [ChunkCandidate(content=combined, content_type=content_type)]
 
@@ -106,11 +104,7 @@ def _split_large_text(text: str) -> list[ChunkCandidate]:
                 # Don't exceed word list
                 end = min(end, len(words))
 
-        chunks.append(
-            ChunkCandidate(
-                content=" ".join(words[start:end]), content_type="text"
-            )
-        )
+        chunks.append(ChunkCandidate(content=" ".join(words[start:end]), content_type="text"))
         if end == len(words):
             break
         start = end - overlap

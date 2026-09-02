@@ -24,16 +24,16 @@ de produit electrique domestique standard et courant.
 
 class InMemoryRegistry:
     def __init__(self):
-        self._hashes: dict[str, str] = {}
+        self._hashes: dict[tuple[str, str], str] = {}
 
-    async def get_active_hash(self, product_ref):
-        return self._hashes.get(product_ref)
+    async def get_active_hash(self, product_ref, document_type):
+        return self._hashes.get((product_ref, document_type))
 
     async def register(self, document: Document):
-        self._hashes[document.product_ref] = document.content_hash
+        self._hashes[(document.product_ref, document.document_type)] = document.content_hash
 
-    async def deprecate(self, product_ref):
-        self._hashes.pop(product_ref, None)
+    async def deprecate(self, product_ref, document_type):
+        self._hashes.pop((product_ref, document_type), None)
 
 
 class InMemoryIndex:

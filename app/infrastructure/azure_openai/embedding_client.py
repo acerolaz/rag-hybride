@@ -1,6 +1,8 @@
+import openai
 from openai import AsyncAzureOpenAI
 
 from app.config import Settings
+from app.domain.errors import EmbeddingServiceError
 
 
 class AzureEmbeddingClient:
@@ -13,5 +15,8 @@ class AzureEmbeddingClient:
         self._deployment = settings.azure_openai_embedding_deployment
 
     async def embed(self, text: str) -> list[float]:
-        response = await self._client.embeddings.create(model=self._deployment, input=text)
+        try:
+            response = await self._client.embeddings.create(model=self._deployment, input=text)
+        except openai.OpenAIError as exc:
+            raise EmbeddingServiceError(f"embedding request failed: {exc}") from exc
         return list(response.data[0].embedding)

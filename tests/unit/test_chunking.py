@@ -9,9 +9,7 @@ from app.domain.chunking import (
 
 def test_tiny_document_becomes_a_single_chunk():
     # Arrange
-    text = (
-        "Courte notice de dix mots pour un petit accessoire technique ici"
-    )
+    text = "Courte notice de dix mots pour un petit accessoire technique ici"
     sections = [RawSection(content=text, content_type="text")]
 
     # Act
@@ -60,9 +58,7 @@ def test_large_text_section_is_split_with_overlap():
 
 def test_small_text_sections_are_merged_until_min_tokens():
     # Arrange
-    text2 = (
-        "phrase courte numero deux avec quelques mots supplementaires"
-    )
+    text2 = "phrase courte numero deux avec quelques mots supplementaires"
     sections = [
         RawSection(
             content="phrase courte numero un avec quelques mots",
@@ -84,6 +80,6 @@ def test_small_text_sections_are_merged_until_min_tokens():
     for chunk in chunks:
         if chunk.content_type == "text":
             chunk_size = len(chunk.content.split())
-            assert (
-                MIN_CHUNK_TOKENS <= chunk_size <= MAX_CHUNK_TOKENS
-            ), f"Text chunk size {chunk_size} outside [{MIN_CHUNK_TOKENS}, {MAX_CHUNK_TOKENS}]"
+            assert MIN_CHUNK_TOKENS <= chunk_size <= MAX_CHUNK_TOKENS, (
+                f"Text chunk size {chunk_size} outside [{MIN_CHUNK_TOKENS}, {MAX_CHUNK_TOKENS}]"
+            )

@@ -41,9 +41,18 @@ def test_answer_with_no_citations_is_a_refusal_shape():
 def test_retrieval_result_holds_both_ranks_and_scores():
     # Arrange
     chunk = Chunk(
-        id="chunk-1", document_id="doc-1", content="x", content_type="text", title="t",
-        product_ref="REF-1", version="1", status="active", document_type="datasheet",
-        published_date=date(2026, 1, 1), content_hash="h", source_path="p",
+        id="chunk-1",
+        document_id="doc-1",
+        content="x",
+        content_type="text",
+        title="t",
+        product_ref="REF-1",
+        version="1",
+        status="active",
+        document_type="datasheet",
+        published_date=date(2026, 1, 1),
+        content_hash="h",
+        source_path="p",
     )
 
     # Act

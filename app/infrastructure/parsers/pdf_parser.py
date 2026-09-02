@@ -31,7 +31,7 @@ class PdfParser:
             raise UnparsableDocumentError(f"no extractable content in {source_path}")
 
         document = Document(
-            id=source_path,
+            id=f"{source_path}::{document_type}",
             title=title,
             product_ref=source_path,
             version="1",

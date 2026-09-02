@@ -1,16 +1,27 @@
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import openai
 import pytest
 
 from app.config import Settings
+from app.domain.errors import EmbeddingServiceError
 from app.domain.models import Chunk
 from app.infrastructure.azure_openai.llm_client import AzureLlmClient
 
 CHUNK = Chunk(
-    id="chunk-1", document_id="REF-1", content="Tension nominale : 230V", content_type="text",
-    title="Fiche REF-1", product_ref="REF-1", version="1", status="active",
-    document_type="datasheet", published_date=date(2026, 1, 1), content_hash="h", source_path="p",
+    id="chunk-1",
+    document_id="REF-1",
+    content="Tension nominale : 230V",
+    content_type="text",
+    title="Fiche REF-1",
+    product_ref="REF-1",
+    version="1",
+    status="active",
+    document_type="datasheet",
+    published_date=date(2026, 1, 1),
+    content_hash="h",
+    source_path="p",
 )
 
 
@@ -61,3 +72,18 @@ async def test_hedge_true_adds_a_cautious_instruction_to_the_system_prompt():
         call_kwargs = mock_client.chat.completions.create.call_args.kwargs
         system_message = call_kwargs["messages"][0]["content"]
         assert "prudente" in system_message
+
+
+@pytest.mark.asyncio
+async def test_generate_wraps_openai_errors_as_embedding_service_error():
+    # Arrange
+    with patch("app.infrastructure.azure_openai.llm_client.AsyncAzureOpenAI") as mock_client_cls:
+        mock_client = mock_client_cls.return_value
+        mock_client.chat.completions.create = AsyncMock(
+            side_effect=openai.APIConnectionError(request=MagicMock())
+        )
+        client = AzureLlmClient(make_settings())
+
+        # Act / Assert
+        with pytest.raises(EmbeddingServiceError):
+            await client.generate("question", [CHUNK], hedge=False)

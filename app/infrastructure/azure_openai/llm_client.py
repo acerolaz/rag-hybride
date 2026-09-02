@@ -1,6 +1,8 @@
+import openai
 from openai import AsyncAzureOpenAI
 
 from app.config import Settings
+from app.domain.errors import EmbeddingServiceError
 from app.domain.models import Chunk
 
 SYSTEM_PROMPT = (
@@ -26,11 +28,14 @@ class AzureLlmClient:
     async def generate(self, query: str, cited_chunks: list[Chunk], hedge: bool) -> str:
         context = "\n\n".join(f"[{c.product_ref}] {c.content}" for c in cited_chunks)
         system_prompt = SYSTEM_PROMPT + (HEDGE_INSTRUCTION if hedge else "")
-        response = await self._client.chat.completions.create(
-            model=self._deployment,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Extraits:\n{context}\n\nQuestion: {query}"},
-            ],
-        )
+        try:
+            response = await self._client.chat.completions.create(
+                model=self._deployment,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Extraits:\n{context}\n\nQuestion: {query}"},
+                ],
+            )
+        except openai.OpenAIError as exc:
+            raise EmbeddingServiceError(f"generation request failed: {exc}") from exc
         return response.choices[0].message.content or ""

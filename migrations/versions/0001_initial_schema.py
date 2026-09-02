@@ -10,6 +10,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import TSVECTOR
 
+from app.infrastructure.postgres.models import EMBEDDING_DIM
+
 revision = "0001"
 down_revision = None
 branch_labels = None
@@ -22,10 +24,10 @@ def upgrade() -> None:
     op.create_table(
         "documents",
         sa.Column("product_ref", sa.String(), primary_key=True),
+        sa.Column("document_type", sa.String(), primary_key=True),
         sa.Column("title", sa.String(), nullable=False),
         sa.Column("version", sa.String(), nullable=False),
         sa.Column("status", sa.String(), nullable=False),
-        sa.Column("document_type", sa.String(), nullable=False),
         sa.Column("published_date", sa.Date(), nullable=False),
         sa.Column("source_path", sa.String(), nullable=False),
         sa.Column("content_hash", sa.String(), nullable=False),
@@ -46,7 +48,7 @@ def upgrade() -> None:
         sa.Column("published_date", sa.Date(), nullable=False),
         sa.Column("content_hash", sa.String(), nullable=False),
         sa.Column("source_path", sa.String(), nullable=False),
-        sa.Column("embedding", pgvector.sqlalchemy.Vector(1536), nullable=True),
+        sa.Column("embedding", pgvector.sqlalchemy.Vector(EMBEDDING_DIM), nullable=True),
         sa.Column("search_vector", TSVECTOR(), nullable=True),
     )
     op.create_index("ix_chunks_document_id", "chunks", ["document_id"])

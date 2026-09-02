@@ -26,17 +26,22 @@ class MarkdownParser:
         metadata = yaml.safe_load(match.group(1))
         body = match.group(2)
 
-        document = Document(
-            id=str(metadata["product_ref"]),
-            title=str(metadata["title"]),
-            product_ref=str(metadata["product_ref"]),
-            version=str(metadata["version"]),
-            status="active",
-            document_type=document_type,
-            published_date=date.fromisoformat(str(metadata["published_date"])),
-            source_path=source_path,
-            content_hash="",
-        )
+        try:
+            document = Document(
+                id=f"{metadata['product_ref']}::{document_type}",
+                title=str(metadata["title"]),
+                product_ref=str(metadata["product_ref"]),
+                version=str(metadata["version"]),
+                status="active",
+                document_type=document_type,
+                published_date=date.fromisoformat(str(metadata["published_date"])),
+                source_path=source_path,
+                content_hash="",
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise UnparsableDocumentError(
+                f"invalid or missing frontmatter field in {source_path}: {exc}"
+            ) from exc
         return document, _split_into_sections(body)
 
 

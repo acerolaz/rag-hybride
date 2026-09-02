@@ -225,7 +225,11 @@ def test_chunk_carries_all_required_citation_metadata():
 
 def test_answer_with_no_citations_is_a_refusal_shape():
     # Arrange / Act
-    answer = Answer(text="Je ne trouve pas cette information dans le corpus.", citations=[], confidence="refused")
+    answer = Answer(
+        text="Je ne trouve pas cette information dans le corpus.",
+        citations=[],
+        confidence="refused",
+    )
 
     # Assert
     assert answer.citations == []
@@ -235,9 +239,18 @@ def test_answer_with_no_citations_is_a_refusal_shape():
 def test_retrieval_result_holds_both_ranks_and_scores():
     # Arrange
     chunk = Chunk(
-        id="chunk-1", document_id="doc-1", content="x", content_type="text", title="t",
-        product_ref="REF-1", version="1", status="active", document_type="datasheet",
-        published_date=date(2026, 1, 1), content_hash="h", source_path="p",
+        id="chunk-1",
+        document_id="doc-1",
+        content="x",
+        content_type="text",
+        title="t",
+        product_ref="REF-1",
+        version="1",
+        status="active",
+        document_type="datasheet",
+        published_date=date(2026, 1, 1),
+        content_hash="h",
+        source_path="p",
     )
 
     # Act
@@ -383,7 +396,12 @@ from app.domain.chunking import RawSection, chunk_sections
 
 def test_tiny_document_becomes_a_single_chunk():
     # Arrange
-    sections = [RawSection(content="Courte notice de dix mots pour un petit accessoire technique ici", content_type="text")]
+    sections = [
+        RawSection(
+            content="Courte notice de dix mots pour un petit accessoire technique ici",
+            content_type="text",
+        )
+    ]
 
     # Act
     chunks = chunk_sections(sections)
@@ -432,7 +450,10 @@ def test_small_text_sections_are_merged_until_min_tokens():
     # Arrange
     sections = [
         RawSection(content="phrase courte numero un avec quelques mots", content_type="text"),
-        RawSection(content="phrase courte numero deux avec quelques mots supplementaires", content_type="text"),
+        RawSection(
+            content="phrase courte numero deux avec quelques mots supplementaires",
+            content_type="text",
+        ),
         RawSection(content=" ".join(f"filler{i}" for i in range(300)), content_type="text"),
     ]
 
@@ -480,7 +501,9 @@ def chunk_sections(sections: list[RawSection]) -> list[ChunkCandidate]:
     total_tokens = sum(estimate_tokens(s.content) for s in sections)
     if total_tokens < TINY_DOCUMENT_TOKENS:
         combined = "\n\n".join(s.content for s in sections)
-        content_type = "table" if len(sections) == 1 and sections[0].content_type == "table" else "text"
+        content_type = (
+            "table" if len(sections) == 1 and sections[0].content_type == "table" else "text"
+        )
         return [ChunkCandidate(content=combined, content_type=content_type)]
 
     chunks: list[ChunkCandidate] = []
@@ -879,14 +902,32 @@ from app.application.use_cases.answer_query import AnswerQueryUseCase
 from app.domain.models import Chunk
 
 CHUNK_A = Chunk(
-    id="chunk-a", document_id="REF-8842", content="Tension nominale : 230V", content_type="text",
-    title="Fiche REF-8842", product_ref="REF-8842", version="1", status="active",
-    document_type="datasheet", published_date=date(2026, 1, 1), content_hash="h", source_path="p",
+    id="chunk-a",
+    document_id="REF-8842",
+    content="Tension nominale : 230V",
+    content_type="text",
+    title="Fiche REF-8842",
+    product_ref="REF-8842",
+    version="1",
+    status="active",
+    document_type="datasheet",
+    published_date=date(2026, 1, 1),
+    content_hash="h",
+    source_path="p",
 )
 CHUNK_B = Chunk(
-    id="chunk-b", document_id="REF-9000", content="Autre fiche non pertinente", content_type="text",
-    title="Fiche REF-9000", product_ref="REF-9000", version="1", status="active",
-    document_type="datasheet", published_date=date(2026, 1, 1), content_hash="h2", source_path="p2",
+    id="chunk-b",
+    document_id="REF-9000",
+    content="Autre fiche non pertinente",
+    content_type="text",
+    title="Fiche REF-9000",
+    product_ref="REF-9000",
+    version="1",
+    status="active",
+    document_type="datasheet",
+    published_date=date(2026, 1, 1),
+    content_hash="h2",
+    source_path="p2",
 )
 
 
@@ -1033,7 +1074,13 @@ from dataclasses import dataclass
 from app.domain.confidence import classify_confidence
 from app.domain.fusion import RankedChunk, reciprocal_rank_fusion
 from app.domain.models import Answer, Chunk, Citation
-from app.domain.ports import EmbeddingPort, LexicalSearchPort, LLMPort, RerankerPort, VectorStorePort
+from app.domain.ports import (
+    EmbeddingPort,
+    LexicalSearchPort,
+    LLMPort,
+    RerankerPort,
+    VectorStorePort,
+)
 
 RERANK_TOP_N = 10
 CITATION_SCORE_FLOOR = 0.4
@@ -1061,7 +1108,9 @@ class AnswerQueryUseCase:
             chunks_by_id[chunk.id] = chunk
 
         dense_ranked = [RankedChunk(chunk_id=chunk.id, rank=rank) for chunk, rank in dense_results]
-        sparse_ranked = [RankedChunk(chunk_id=chunk.id, rank=rank) for chunk, rank in sparse_results]
+        sparse_ranked = [
+            RankedChunk(chunk_id=chunk.id, rank=rank) for chunk, rank in sparse_results
+        ]
         fused = reciprocal_rank_fusion(dense_ranked, sparse_ranked)
 
         if not fused:
@@ -1080,10 +1129,17 @@ class AnswerQueryUseCase:
         if confidence == "refused":
             return Answer(text=REFUSAL_TEXT, citations=[], confidence="refused")
 
-        cited_chunks = [chunk for chunk, score in reranked if score >= CITATION_SCORE_FLOOR][:MAX_CITATIONS]
+        cited_chunks = [chunk for chunk, score in reranked if score >= CITATION_SCORE_FLOOR][
+            :MAX_CITATIONS
+        ]
         text = await self.llm.generate(query, cited_chunks, hedge=(confidence == "low"))
         citations = [
-            Citation(title=c.title, product_ref=c.product_ref, published_date=c.published_date, url=c.source_path)
+            Citation(
+                title=c.title,
+                product_ref=c.product_ref,
+                published_date=c.published_date,
+                url=c.source_path,
+            )
             for c in cited_chunks
         ]
         return Answer(text=text, citations=citations, confidence=confidence)
@@ -1129,9 +1185,15 @@ from app.domain.models import Document
 
 def make_document(product_ref: str) -> Document:
     return Document(
-        id=product_ref, title=f"Fiche {product_ref}", product_ref=product_ref, version="1",
-        status="active", document_type="datasheet", published_date=date(2026, 1, 1),
-        source_path=f"{product_ref}.md", content_hash="",
+        id=product_ref,
+        title=f"Fiche {product_ref}",
+        product_ref=product_ref,
+        version="1",
+        status="active",
+        document_type="datasheet",
+        published_date=date(2026, 1, 1),
+        source_path=f"{product_ref}.md",
+        content_hash="",
     )
 
 
@@ -1303,7 +1365,13 @@ from dataclasses import dataclass, replace
 from app.domain.chunking import chunk_sections
 from app.domain.errors import UnsupportedFormatError
 from app.domain.models import Chunk
-from app.domain.ports import DocumentParserPort, DocumentRegistryPort, EmbeddingPort, LexicalSearchPort, VectorStorePort
+from app.domain.ports import (
+    DocumentParserPort,
+    DocumentRegistryPort,
+    EmbeddingPort,
+    LexicalSearchPort,
+    VectorStorePort,
+)
 from app.domain.versioning import resolve_ingest_action
 
 
@@ -1479,7 +1547,9 @@ HEADER_RE = re.compile(r"^#{1,6}\s+.*$", re.MULTILINE)
 
 
 class MarkdownParser:
-    def parse(self, raw_bytes: bytes, document_type: str, source_path: str) -> tuple[Document, list[RawSection]]:
+    def parse(
+        self, raw_bytes: bytes, document_type: str, source_path: str
+    ) -> tuple[Document, list[RawSection]]:
         text = raw_bytes.decode("utf-8")
         match = FRONTMATTER_RE.match(text)
         if not match:
@@ -1640,7 +1710,9 @@ HEADING_SIZE_RATIO = 1.15
 
 
 class PdfParser:
-    def parse(self, raw_bytes: bytes, document_type: str, source_path: str) -> tuple[Document, list[RawSection]]:
+    def parse(
+        self, raw_bytes: bytes, document_type: str, source_path: str
+    ) -> tuple[Document, list[RawSection]]:
         sections: list[RawSection] = []
         with pdfplumber.open(io.BytesIO(raw_bytes)) as pdf:
             if not pdf.pages:
@@ -1746,7 +1818,9 @@ def make_settings() -> Settings:
 @pytest.mark.asyncio
 async def test_embed_returns_the_vector_from_the_first_response_item():
     # Arrange
-    with patch("app.infrastructure.azure_openai.embedding_client.AsyncAzureOpenAI") as mock_client_cls:
+    with patch(
+        "app.infrastructure.azure_openai.embedding_client.AsyncAzureOpenAI"
+    ) as mock_client_cls:
         mock_client = mock_client_cls.return_value
         mock_response = MagicMock()
         mock_response.data = [MagicMock(embedding=[0.1, 0.2, 0.3])]
@@ -1828,9 +1902,18 @@ from app.domain.models import Chunk
 from app.infrastructure.azure_openai.llm_client import AzureLlmClient
 
 CHUNK = Chunk(
-    id="chunk-1", document_id="REF-1", content="Tension nominale : 230V", content_type="text",
-    title="Fiche REF-1", product_ref="REF-1", version="1", status="active",
-    document_type="datasheet", published_date=date(2026, 1, 1), content_hash="h", source_path="p",
+    id="chunk-1",
+    document_id="REF-1",
+    content="Tension nominale : 230V",
+    content_type="text",
+    title="Fiche REF-1",
+    product_ref="REF-1",
+    version="1",
+    status="active",
+    document_type="datasheet",
+    published_date=date(2026, 1, 1),
+    content_hash="h",
+    source_path="p",
 )
 
 
@@ -1967,7 +2050,9 @@ from app.infrastructure.reranker.cross_encoder_reranker import CrossEncoderReran
 @pytest.mark.asyncio
 async def test_score_normalizes_raw_logit_to_zero_one_range():
     # Arrange
-    with patch("app.infrastructure.reranker.cross_encoder_reranker.CrossEncoder") as mock_cross_encoder_cls:
+    with patch(
+        "app.infrastructure.reranker.cross_encoder_reranker.CrossEncoder"
+    ) as mock_cross_encoder_cls:
         mock_model = MagicMock()
         mock_model.predict.return_value = [0.0]
         mock_cross_encoder_cls.return_value = mock_model
@@ -1983,7 +2068,9 @@ async def test_score_normalizes_raw_logit_to_zero_one_range():
 @pytest.mark.asyncio
 async def test_high_raw_logit_scores_close_to_one():
     # Arrange
-    with patch("app.infrastructure.reranker.cross_encoder_reranker.CrossEncoder") as mock_cross_encoder_cls:
+    with patch(
+        "app.infrastructure.reranker.cross_encoder_reranker.CrossEncoder"
+    ) as mock_cross_encoder_cls:
         mock_model = MagicMock()
         mock_model.predict.return_value = [10.0]
         mock_cross_encoder_cls.return_value = mock_model
@@ -2341,9 +2428,18 @@ from app.infrastructure.postgres.pgvector_repository import PgVectorRepository
 
 def make_chunk(chunk_id: str, product_ref: str, content: str) -> Chunk:
     return Chunk(
-        id=chunk_id, document_id=product_ref, content=content, content_type="text",
-        title=f"Fiche {product_ref}", product_ref=product_ref, version="1", status="active",
-        document_type="datasheet", published_date=date(2026, 1, 1), content_hash="h", source_path="p",
+        id=chunk_id,
+        document_id=product_ref,
+        content=content,
+        content_type="text",
+        title=f"Fiche {product_ref}",
+        product_ref=product_ref,
+        version="1",
+        status="active",
+        document_type="datasheet",
+        published_date=date(2026, 1, 1),
+        content_hash="h",
+        source_path="p",
     )
 
 
@@ -2414,6 +2510,7 @@ async def db_session(postgres_container):
     ChunkRow.__table__.columns["embedding"].type = Vector(2)
     engine = create_async_engine(postgres_container.get_connection_url())
     import sqlalchemy as sa
+
     async with engine.begin() as conn:
         await conn.execute(sa.text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)
@@ -2512,9 +2609,18 @@ from app.infrastructure.postgres.bm25_repository import Bm25Repository
 
 def make_chunk(chunk_id: str, product_ref: str, content: str) -> Chunk:
     return Chunk(
-        id=chunk_id, document_id=product_ref, content=content, content_type="text",
-        title=f"Fiche {product_ref}", product_ref=product_ref, version="1", status="active",
-        document_type="datasheet", published_date=date(2026, 1, 1), content_hash="h", source_path="p",
+        id=chunk_id,
+        document_id=product_ref,
+        content=content,
+        content_type="text",
+        title=f"Fiche {product_ref}",
+        product_ref=product_ref,
+        version="1",
+        status="active",
+        document_type="datasheet",
+        published_date=date(2026, 1, 1),
+        content_hash="h",
+        source_path="p",
     )
 
 
@@ -2655,9 +2761,15 @@ from app.infrastructure.postgres.document_registry import PostgresDocumentRegist
 
 def make_document(product_ref: str, content_hash: str) -> Document:
     return Document(
-        id=product_ref, title=f"Fiche {product_ref}", product_ref=product_ref, version="1",
-        status="active", document_type="datasheet", published_date=date(2026, 1, 1),
-        source_path=f"{product_ref}.md", content_hash=content_hash,
+        id=product_ref,
+        title=f"Fiche {product_ref}",
+        product_ref=product_ref,
+        version="1",
+        status="active",
+        document_type="datasheet",
+        published_date=date(2026, 1, 1),
+        source_path=f"{product_ref}.md",
+        content_hash=content_hash,
     )
 
 
@@ -2696,9 +2808,18 @@ async def test_deprecate_marks_document_and_its_chunks_as_deprecated(db_session)
     document = make_document("REF-2", "hash-2")
     await registry.register(document)
     chunk_row = ChunkRow(
-        id="chunk-1", document_id="REF-2", content="x", content_type="text", title="t",
-        product_ref="REF-2", version="1", status="active", document_type="datasheet",
-        published_date=date(2026, 1, 1), content_hash="hash-2", source_path="p",
+        id="chunk-1",
+        document_id="REF-2",
+        content="x",
+        content_type="text",
+        title="t",
+        product_ref="REF-2",
+        version="1",
+        status="active",
+        document_type="datasheet",
+        published_date=date(2026, 1, 1),
+        content_hash="hash-2",
+        source_path="p",
     )
     db_session.add(chunk_row)
     await db_session.commit()
@@ -2750,7 +2871,9 @@ class PostgresDocumentRegistry:
 
     async def deprecate(self, product_ref: str) -> None:
         await self._session.execute(
-            update(DocumentRow).where(DocumentRow.product_ref == product_ref).values(status="deprecated")
+            update(DocumentRow)
+            .where(DocumentRow.product_ref == product_ref)
+            .values(status="deprecated")
         )
         await self._session.execute(
             update(ChunkRow).where(ChunkRow.product_ref == product_ref).values(status="deprecated")
@@ -2831,7 +2954,12 @@ from functools import lru_cache
 from typing import AsyncIterator
 
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.application.use_cases.answer_query import AnswerQueryUseCase
 from app.application.use_cases.ingest_document import IngestDocumentUseCase
@@ -2912,7 +3040,9 @@ async def query_documents(
         answer=answer.text,
         citations=[
             CitationResponse(
-                title=c.title, product_ref=c.product_ref, published_date=c.published_date.isoformat()
+                title=c.title,
+                product_ref=c.product_ref,
+                published_date=c.published_date.isoformat(),
             )
             for c in answer.citations
         ],
@@ -2952,7 +3082,9 @@ async def ingest_document(
         raise HTTPException(
             status_code=422, detail={"error_code": "UNPARSABLE_DOCUMENT", "message": str(exc)}
         ) from exc
-    return IngestResponse(document_id=result.document_id, chunk_count=result.chunk_count, status=result.status)
+    return IngestResponse(
+        document_id=result.document_id, chunk_count=result.chunk_count, status=result.status
+    )
 ```
 
 - [ ] **Step 6: Write `app/main.py`**
@@ -2995,7 +3127,9 @@ async def test_query_route_returns_citations_on_high_confidence():
     # Arrange
     answer = Answer(
         text="Réponse.",
-        citations=[Citation(title="Fiche REF-1", product_ref="REF-1", published_date=date(2026, 1, 1))],
+        citations=[
+            Citation(title="Fiche REF-1", product_ref="REF-1", published_date=date(2026, 1, 1))
+        ],
         confidence="high",
     )
     app.dependency_overrides[get_answer_query_use_case] = lambda: FakeUseCase(answer)
@@ -3015,7 +3149,11 @@ async def test_query_route_returns_citations_on_high_confidence():
 @pytest.mark.asyncio
 async def test_query_route_returns_refusal_with_no_citations():
     # Arrange
-    answer = Answer(text="Je ne trouve pas cette information dans le corpus.", citations=[], confidence="refused")
+    answer = Answer(
+        text="Je ne trouve pas cette information dans le corpus.",
+        citations=[],
+        confidence="refused",
+    )
     app.dependency_overrides[get_answer_query_use_case] = lambda: FakeUseCase(answer)
 
     # Act
@@ -3242,7 +3380,9 @@ async def test_ingested_document_is_answerable_with_citations():
             files={"file": ("REF-8842.md", VALID_MARKDOWN, "text/markdown")},
         )
         # Act — query
-        query_response = await client.post("/api/v1/query", json={"query": "tension nominale REF-8842"})
+        query_response = await client.post(
+            "/api/v1/query", json={"query": "tension nominale REF-8842"}
+        )
 
     # Assert
     assert ingest_response.status_code == 200
@@ -3264,7 +3404,9 @@ async def test_out_of_corpus_question_is_explicitly_refused():
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         # Act — no document ever ingested for this use case instance
-        response = await client.post("/api/v1/query", json={"query": "question totalement hors corpus"})
+        response = await client.post(
+            "/api/v1/query", json={"query": "question totalement hors corpus"}
+        )
 
     # Assert
     assert response.status_code == 200
@@ -3352,7 +3494,15 @@ def test_load_questions_reads_all_categories():
 async def test_evaluate_pipeline_computes_refusal_accuracy_for_hors_corpus():
     # Arrange
     questions = [{"category": "hors_corpus", "question": "q1", "expected_refused": True}]
-    use_case = FakeUseCase({"q1": Answer(text="Je ne trouve pas cette information dans le corpus.", citations=[], confidence="refused")})
+    use_case = FakeUseCase(
+        {
+            "q1": Answer(
+                text="Je ne trouve pas cette information dans le corpus.",
+                citations=[],
+                confidence="refused",
+            )
+        }
+    )
 
     # Act
     metrics = await evaluate_pipeline(use_case, questions)
@@ -3363,8 +3513,11 @@ async def test_evaluate_pipeline_computes_refusal_accuracy_for_hors_corpus():
 
 async def test_evaluate_pipeline_computes_hit_rate_at_1_for_reference_exacte():
     # Arrange
-    questions = [{"category": "reference_exacte", "question": "q1", "expected_product_ref": "REF-1"}]
+    questions = [
+        {"category": "reference_exacte", "question": "q1", "expected_product_ref": "REF-1"}
+    ]
     from datetime import date
+
     citation = Citation(title="t", product_ref="REF-1", published_date=date(2026, 1, 1))
     use_case = FakeUseCase({"q1": Answer(text="ok", citations=[citation], confidence="high")})
 
@@ -3399,7 +3552,9 @@ def load_questions(path: str) -> list[dict]:
     return questions
 
 
-async def evaluate_pipeline(use_case: AnswerQueryUseCase, questions: list[dict]) -> dict[str, float]:
+async def evaluate_pipeline(
+    use_case: AnswerQueryUseCase, questions: list[dict]
+) -> dict[str, float]:
     by_category: dict[str, list[dict]] = {}
     for question in questions:
         by_category.setdefault(question["category"], []).append(question)
@@ -3448,7 +3603,11 @@ class ComparisonRow:
     pipeline_b: float
 
 
-async def run_comparison(dense_only_use_case: AnswerQueryUseCase, hybrid_use_case: AnswerQueryUseCase, questions: list[dict]) -> None:
+async def run_comparison(
+    dense_only_use_case: AnswerQueryUseCase,
+    hybrid_use_case: AnswerQueryUseCase,
+    questions: list[dict],
+) -> None:
     metrics_a = await evaluate_pipeline(dense_only_use_case, questions)
     metrics_b = await evaluate_pipeline(hybrid_use_case, questions)
 
@@ -3462,7 +3621,9 @@ async def run_comparison(dense_only_use_case: AnswerQueryUseCase, hybrid_use_cas
 if __name__ == "__main__":
     import asyncio
 
-    print("run_eval.py is a manual benchmarking script — wire real Pipeline A / Pipeline B use cases before running.")
+    print(
+        "run_eval.py is a manual benchmarking script — wire real Pipeline A / Pipeline B use cases before running."
+    )
     asyncio.run(run_comparison(None, None, load_questions("tests/eval/questions_rag.jsonl")))  # type: ignore[arg-type]
 ```
 

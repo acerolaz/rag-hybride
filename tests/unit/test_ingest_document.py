@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import date
 
 import pytest
@@ -10,9 +11,15 @@ from app.domain.models import Document
 
 def make_document(product_ref: str) -> Document:
     return Document(
-        id=product_ref, title=f"Fiche {product_ref}", product_ref=product_ref, version="1",
-        status="active", document_type="datasheet", published_date=date(2026, 1, 1),
-        source_path=f"{product_ref}.md", content_hash="",
+        id=product_ref,
+        title=f"Fiche {product_ref}",
+        product_ref=product_ref,
+        version="1",
+        status="active",
+        document_type="datasheet",
+        published_date=date(2026, 1, 1),
+        source_path=f"{product_ref}.md",
+        content_hash="",
     )
 
 
@@ -29,16 +36,16 @@ class FakeRegistry:
     def __init__(self, active_hash: str | None = None):
         self.active_hash = active_hash
         self.registered: list[Document] = []
-        self.deprecated: list[str] = []
+        self.deprecated: list[tuple[str, str]] = []
 
-    async def get_active_hash(self, product_ref: str) -> str | None:
+    async def get_active_hash(self, product_ref: str, document_type: str) -> str | None:
         return self.active_hash
 
     async def register(self, document: Document) -> None:
         self.registered.append(document)
 
-    async def deprecate(self, product_ref: str) -> None:
-        self.deprecated.append(product_ref)
+    async def deprecate(self, product_ref: str, document_type: str) -> None:
+        self.deprecated.append((product_ref, document_type))
 
 
 class FakeEmbeddingPort:
@@ -149,8 +156,51 @@ async def test_changed_hash_deprecates_old_version_before_reindexing():
 
     # Assert
     assert result.status == "updated"
-    assert registry.deprecated == ["REF-3"]
+    assert registry.deprecated == [("REF-3", "datasheet")]
     assert vector_store.deleted == ["REF-3"]
+
+
+@pytest.mark.asyncio
+async def test_two_document_types_with_same_product_ref_both_created():
+    # Arrange
+    class MultiTypeRegistry(FakeRegistry):
+        """Simulates the real composite-key registry: each (product_ref,
+        document_type) pair has its own independent active hash, defaulting
+        to None (never seen before) rather than a single shared value."""
+
+        async def get_active_hash(self, product_ref: str, document_type: str) -> str | None:
+            return None
+
+    datasheet_document = make_document("REF-9")
+    manuel_document = replace(make_document("REF-9"), document_type="manuel", id="REF-9::manuel")
+    registry = MultiTypeRegistry()
+
+    datasheet_use_case = IngestDocumentUseCase(
+        parsers={
+            "md": FakeParser(datasheet_document, [RawSection(content="c1", content_type="text")])
+        },
+        registry=registry,
+        embedding_port=FakeEmbeddingPort(),
+        vector_store=FakeVectorStore(),
+        lexical_search=FakeLexicalSearch(),
+    )
+    manuel_use_case = IngestDocumentUseCase(
+        parsers={
+            "md": FakeParser(manuel_document, [RawSection(content="c2", content_type="text")])
+        },
+        registry=registry,
+        embedding_port=FakeEmbeddingPort(),
+        vector_store=FakeVectorStore(),
+        lexical_search=FakeLexicalSearch(),
+    )
+
+    # Act
+    datasheet_result = await datasheet_use_case.execute(b"a", "REF-9.md", "datasheet")
+    manuel_result = await manuel_use_case.execute(b"b", "REF-9.md", "manuel")
+
+    # Assert
+    assert datasheet_result.status == "created"
+    assert manuel_result.status == "created"
 
 
 @pytest.mark.asyncio

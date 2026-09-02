@@ -6,14 +6,32 @@ from app.application.use_cases.answer_query import AnswerQueryUseCase
 from app.domain.models import Chunk
 
 CHUNK_A = Chunk(
-    id="chunk-a", document_id="REF-8842", content="Tension nominale : 230V", content_type="text",
-    title="Fiche REF-8842", product_ref="REF-8842", version="1", status="active",
-    document_type="datasheet", published_date=date(2026, 1, 1), content_hash="h", source_path="p",
+    id="chunk-a",
+    document_id="REF-8842",
+    content="Tension nominale : 230V",
+    content_type="text",
+    title="Fiche REF-8842",
+    product_ref="REF-8842",
+    version="1",
+    status="active",
+    document_type="datasheet",
+    published_date=date(2026, 1, 1),
+    content_hash="h",
+    source_path="p",
 )
 CHUNK_B = Chunk(
-    id="chunk-b", document_id="REF-9000", content="Autre fiche non pertinente", content_type="text",
-    title="Fiche REF-9000", product_ref="REF-9000", version="1", status="active",
-    document_type="datasheet", published_date=date(2026, 1, 1), content_hash="h2", source_path="p2",
+    id="chunk-b",
+    document_id="REF-9000",
+    content="Autre fiche non pertinente",
+    content_type="text",
+    title="Fiche REF-9000",
+    product_ref="REF-9000",
+    version="1",
+    status="active",
+    document_type="datasheet",
+    published_date=date(2026, 1, 1),
+    content_hash="h2",
+    source_path="p2",
 )
 
 
