@@ -16,4 +16,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    # pydantic-settings populates fields from .env/environment at runtime
+    return Settings()  # type: ignore[call-arg]

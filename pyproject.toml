@@ -37,6 +37,7 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
 
+# 3.12: numpy's bundled stubs use PEP 695 type syntax unsupported by mypy under 3.11
 [tool.mypy]
 python_version = "3.12"
 strict = true
