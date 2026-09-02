@@ -38,5 +38,5 @@ line-length = 100
 select = ["E", "F", "I", "W"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = true
