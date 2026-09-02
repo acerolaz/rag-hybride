@@ -57,15 +57,13 @@ def chunk_sections(sections: list[RawSection]) -> list[ChunkCandidate]:
             if buffer and buffer_tokens < MIN_CHUNK_TOKENS:
                 needed = MIN_CHUNK_TOKENS - buffer_tokens
                 words = section.content.split()
-                if needed < len(words):
-                    buffer.append(" ".join(words[:needed]))
-                    buffer_tokens += needed
-                    flush_buffer()
-                    remaining = " ".join(words[needed:])
-                    chunks.extend(_split_large_text(remaining))
-                else:
-                    buffer.append(section.content)
-                    buffer_tokens += section_tokens
+                # needed is at most MIN_CHUNK_TOKENS (~50); section_tokens > 250;
+                # so needed < len(words) is always true for large sections
+                buffer.append(" ".join(words[:needed]))
+                buffer_tokens += needed
+                flush_buffer()
+                remaining = " ".join(words[needed:])
+                chunks.extend(_split_large_text(remaining))
             else:
                 flush_buffer()
                 chunks.extend(_split_large_text(section.content))
@@ -88,7 +86,31 @@ def _split_large_text(text: str) -> list[ChunkCandidate]:
     start = 0
     while start < len(words):
         end = min(start + step, len(words))
-        chunks.append(ChunkCandidate(content=" ".join(words[start:end]), content_type="text"))
+        remaining_after_chunk = len(words) - end
+
+        # If there are remaining words, ensure the tail chunk won't be too small.
+        # Tail would start at (end - overlap) and end at len(words), giving size:
+        # len(words) - (end - overlap) = remaining_after_chunk + overlap
+        if remaining_after_chunk > 0:
+            tail_size = remaining_after_chunk + overlap
+            if tail_size < MIN_CHUNK_TOKENS:
+                # Reduce end to make the tail chunk at least MIN_CHUNK_TOKENS
+                # We want: remaining_after_chunk + overlap >= MIN_CHUNK_TOKENS
+                # So: len(words) - end + overlap >= MIN_CHUNK_TOKENS
+                # So: end <= len(words) - (MIN_CHUNK_TOKENS - overlap)
+                end = len(words) - (MIN_CHUNK_TOKENS - overlap)
+                # Ensure current chunk is also >= MIN_CHUNK_TOKENS
+                end = max(end, start + MIN_CHUNK_TOKENS)
+                # Ensure current chunk is <= MAX_CHUNK_TOKENS
+                end = min(end, start + MAX_CHUNK_TOKENS)
+                # Don't exceed word list
+                end = min(end, len(words))
+
+        chunks.append(
+            ChunkCandidate(
+                content=" ".join(words[start:end]), content_type="text"
+            )
+        )
         if end == len(words):
             break
         start = end - overlap

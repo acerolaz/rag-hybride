@@ -1,4 +1,10 @@
-from app.domain.chunking import MAX_CHUNK_TOKENS, OVERLAP_RATIO, RawSection, chunk_sections
+from app.domain.chunking import (
+    MAX_CHUNK_TOKENS,
+    MIN_CHUNK_TOKENS,
+    OVERLAP_RATIO,
+    RawSection,
+    chunk_sections,
+)
 
 
 def test_tiny_document_becomes_a_single_chunk():
@@ -74,3 +80,10 @@ def test_small_text_sections_are_merged_until_min_tokens():
 
     # Assert
     assert len(chunks[0].content.split()) >= 50
+    # Verify the invariant: all text chunks are within [MIN_CHUNK_TOKENS, MAX_CHUNK_TOKENS]
+    for chunk in chunks:
+        if chunk.content_type == "text":
+            chunk_size = len(chunk.content.split())
+            assert (
+                MIN_CHUNK_TOKENS <= chunk_size <= MAX_CHUNK_TOKENS
+            ), f"Text chunk size {chunk_size} outside [{MIN_CHUNK_TOKENS}, {MAX_CHUNK_TOKENS}]"
