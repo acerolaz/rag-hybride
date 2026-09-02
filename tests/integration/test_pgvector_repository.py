@@ -18,9 +18,9 @@ async def db_session(postgres_container):
     # must restore the original type afterward or it leaks into every other test file that
     # touches ChunkRow for the rest of the pytest session.
     original_type = ChunkRow.__table__.columns["embedding"].type
-    ChunkRow.__table__.columns["embedding"].type = Vector(2)
-    engine = create_async_engine(postgres_container.get_connection_url())
     try:
+        ChunkRow.__table__.columns["embedding"].type = Vector(2)
+        engine = create_async_engine(postgres_container.get_connection_url())
         async with engine.begin() as conn:
             await conn.execute(sa.text("CREATE EXTENSION IF NOT EXISTS vector"))
             await conn.run_sync(Base.metadata.create_all)
@@ -30,9 +30,9 @@ async def db_session(postgres_container):
             await session.rollback()
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
+        await engine.dispose()
     finally:
         ChunkRow.__table__.columns["embedding"].type = original_type
-        await engine.dispose()
 
 
 def make_chunk(chunk_id: str, product_ref: str, content: str) -> Chunk:
