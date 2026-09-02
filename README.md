@@ -202,3 +202,41 @@ Les briques internes (parseurs PDF, index vectoriel, moteur BM25, reranker) rest
 | Recherche dense sur identifiant | `Equals()` approximatif vs recherche par clé exacte |
 | Benchmark E6 avant/après | Suite de tests de non-régression |
 | `hors_corpus` dans le jeu de test | Cas d'erreur métier attendu (exception contrôlée) |
+
+## 9. Base de données locale (Docker + migrations)
+
+La base vectorielle tourne dans un conteneur ; le schéma n'est jamais créé à la main,
+uniquement par migration Alembic.
+
+```bash
+cp .env.example .env          # puis renseigner POSTGRES_PASSWORD
+docker compose up -d --wait postgres
+alembic upgrade head          # initialise le schéma
+```
+
+`--wait` s'appuie sur le `healthcheck` (`pg_isready`) du service : la commande ne rend
+la main que lorsque Postgres accepte réellement les connexions.
+
+Faire évoluer le schéma :
+
+```bash
+alembic revision --autogenerate -m "description"   # génère la révision
+alembic check                                       # modèles ↔ base : aucun écart ?
+alembic upgrade head                                # applique
+alembic downgrade -1                                # annule la dernière
+```
+
+> `--autogenerate` ne détecte pas fiablement les colonnes `Computed` ni les options
+> d'index HNSW (`m`, `ef_construction`) : toute révision qui y touche doit être relue
+> à la main.
+
+### Schéma indexé
+
+| Colonne | Index | Rôle |
+|---|---|---|
+| `chunks.search_vector` | GIN | Recherche lexicale (BM25) — colonne générée `STORED` par Postgres depuis `content` |
+| `chunks.embedding` | HNSW `vector_cosine_ops` | Recherche dense — même métrique que `cosine_distance()` côté repository |
+
+Les tests d'intégration (`tests/integration/test_migrations.py`) exécutent réellement
+`alembic upgrade head` sur un conteneur pgvector : une révision cassée fait échouer la
+suite, ce que la création de schéma via `Base.metadata.create_all` ne détecterait pas.

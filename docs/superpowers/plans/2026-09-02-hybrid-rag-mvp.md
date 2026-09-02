@@ -2127,6 +2127,15 @@ git commit -m "feat: add local cross-encoder reranker"
 
 ## Task 16: Infrastructure — Postgres SQLAlchemy Models + Alembic Migration
 
+> **Partially superseded — see migration `0002_retrieval_indexes.py`.** As written,
+> this task shipped no index on `chunks.search_vector` or `chunks.embedding`, so both
+> halves of hybrid retrieval sequential-scanned; and its `downgrade()` dropped the
+> database-wide `vector` extension. Revision `0002` adds a GIN index and an HNSW
+> (`vector_cosine_ops`) index, and converts `search_vector` to a STORED generated
+> column; `0001`'s `downgrade()` no longer drops the extension. `docker-compose.yml`
+> is also Postgres-only — the `app` service described in Task 1 declared `build: .`
+> with no Dockerfile in the repo, which broke `docker compose up` outright.
+
 **Files:**
 - Create: `app/infrastructure/postgres/__init__.py`
 - Create: `app/infrastructure/postgres/models.py`
@@ -2586,6 +2595,12 @@ git commit -m "feat: add pgvector-backed VectorStorePort implementation"
 ---
 
 ## Task 18: Infrastructure — BM25 (tsvector) Repository (Testcontainers)
+
+> **Partially superseded — see migration `0002_retrieval_indexes.py`.** `upsert()` no
+> longer assigns `row.search_vector = func.to_tsvector("french", ...)`: the column is
+> now a STORED generated column that Postgres maintains, so the index cannot drift
+> from `content` and an explicit assignment would be rejected. Query-time
+> `plainto_tsquery("french", ...)` is unchanged.
 
 **Files:**
 - Create: `app/infrastructure/postgres/bm25_repository.py`

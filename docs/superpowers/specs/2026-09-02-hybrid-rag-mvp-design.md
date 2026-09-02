@@ -186,7 +186,15 @@ app/
 ## Deployment
 
 - `docker-compose.yml` for local dev: Postgres with the `pgvector` extension enabled,
-  plus the app service.
+  behind a `pg_isready` healthcheck so dependents can wait on `condition:
+  service_healthy`. Postgres only — the app runs on the host until there is a
+  Dockerfile to build. Credentials come from `POSTGRES_*` in `.env`, never inline.
+- Schema is created and evolved exclusively through Alembic (`alembic upgrade head`).
+  Migrations resolve their target from `sqlalchemy.url`, then `DATABASE_URL`, then
+  `Settings` — so initializing a database needs a connection string and nothing else.
+- `chunks.search_vector` is a Postgres STORED generated column, indexed with GIN;
+  `chunks.embedding` is indexed with HNSW using `vector_cosine_ops`, matching the
+  cosine ordering the dense repository queries with.
 - Azure OpenAI reached via environment variables (`AZURE_OPENAI_*`), loaded through
   `pydantic-settings`; `.env` is gitignored, `.env.example` documents the expected keys
   (`AZURE_OPENAI_*`, `DATABASE_URL`) with no real values.

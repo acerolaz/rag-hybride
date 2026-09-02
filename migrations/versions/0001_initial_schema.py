@@ -59,4 +59,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table("chunks")
     op.drop_table("documents")
-    op.execute("DROP EXTENSION IF EXISTS vector")
+    # The `vector` extension is deliberately left installed: it is
+    # database-wide, may be shared with other schemas, and dropping it fails
+    # as soon as anything outside this migration depends on it.
