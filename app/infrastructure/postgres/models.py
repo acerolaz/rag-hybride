@@ -2,7 +2,7 @@ from datetime import date
 from typing import Annotated
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Computed, Index, String, Text
+from sqlalchemy import Computed, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -22,9 +22,24 @@ class Base(DeclarativeBase):
 
 class DocumentRow(Base):
     __tablename__ = "documents"
+    __table_args__ = (
+        # One row per version of a document. A composite *primary* key of
+        # (product_ref, document_type) could only ever hold the current
+        # version, so a superseded one had nowhere to live.
+        UniqueConstraint(
+            "product_ref",
+            "document_type",
+            "version",
+            name="uq_documents_product_ref_document_type_version",
+        ),
+        # Serves the registry's hot lookup: the active version of one
+        # product's document of a given type.
+        Index("ix_documents_ref_type_status", "product_ref", "document_type", "status"),
+    )
 
-    product_ref: Mapped[str] = mapped_column(String, primary_key=True)
-    document_type: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[PrimaryKeyStr]
+    product_ref: Mapped[str]
+    document_type: Mapped[str]
     title: Mapped[str]
     version: Mapped[str]
     status: Mapped[str] = mapped_column(String, index=True)
@@ -51,7 +66,15 @@ class ChunkRow(Base):
     )
 
     id: Mapped[PrimaryKeyStr]
-    document_id: Mapped[str] = mapped_column(String, index=True)
+    document_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey(
+            "documents.id",
+            ondelete="CASCADE",
+            name="fk_chunks_document_id_documents",
+        ),
+        index=True,
+    )
     content: Mapped[str] = mapped_column(Text)
     content_type: Mapped[str]
     title: Mapped[str]

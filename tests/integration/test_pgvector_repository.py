@@ -7,6 +7,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.domain.models import Chunk
+from app.domain.versioning import make_document_id
 from app.infrastructure.postgres.models import Base, ChunkRow
 from app.infrastructure.postgres.pgvector_repository import PgVectorRepository
 
@@ -38,7 +39,7 @@ async def db_session(postgres_container):
 def make_chunk(chunk_id: str, product_ref: str, content: str) -> Chunk:
     return Chunk(
         id=chunk_id,
-        document_id=product_ref,
+        document_id=make_document_id(product_ref, "datasheet", "1"),
         content=content,
         content_type="text",
         title=f"Fiche {product_ref}",
@@ -53,11 +54,12 @@ def make_chunk(chunk_id: str, product_ref: str, content: str) -> Chunk:
 
 
 @pytest.mark.asyncio
-async def test_upsert_then_search_returns_closest_chunk_first(db_session):
+async def test_upsert_then_search_returns_closest_chunk_first(db_session, given_parent_documents):
     # Arrange
     repo = PgVectorRepository(db_session)
     chunk_close = make_chunk("chunk-close", "REF-1", "Tension nominale 230V")
     chunk_far = make_chunk("chunk-far", "REF-2", "Procédure de retour produit")
+    await given_parent_documents(chunk_close, chunk_far)
     await repo.upsert([chunk_close, chunk_far], [[1.0, 0.0], [0.0, 1.0]])
 
     # Act
@@ -69,11 +71,12 @@ async def test_upsert_then_search_returns_closest_chunk_first(db_session):
 
 
 @pytest.mark.asyncio
-async def test_search_can_be_scoped_to_a_product_ref(db_session):
+async def test_search_can_be_scoped_to_a_product_ref(db_session, given_parent_documents):
     # Arrange
     repo = PgVectorRepository(db_session)
     chunk_a = make_chunk("chunk-a", "REF-A", "contenu A")
     chunk_b = make_chunk("chunk-b", "REF-B", "contenu B")
+    await given_parent_documents(chunk_a, chunk_b)
     await repo.upsert([chunk_a, chunk_b], [[1.0, 0.0], [1.0, 0.0]])
 
     # Act
@@ -85,14 +88,15 @@ async def test_search_can_be_scoped_to_a_product_ref(db_session):
 
 
 @pytest.mark.asyncio
-async def test_delete_by_document_id_removes_its_chunks(db_session):
+async def test_delete_by_document_id_removes_its_chunks(db_session, given_parent_documents):
     # Arrange
     repo = PgVectorRepository(db_session)
     chunk = make_chunk("chunk-x", "REF-X", "à supprimer")
+    await given_parent_documents(chunk)
     await repo.upsert([chunk], [[0.5, 0.5]])
 
     # Act
-    await repo.delete_by_document_id("REF-X")
+    await repo.delete_by_document_id(chunk.document_id)
     results = await repo.search(embedding=[0.5, 0.5], top_k=10)
 
     # Assert

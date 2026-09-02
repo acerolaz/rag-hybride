@@ -6,6 +6,7 @@ import yaml  # type: ignore[import-untyped]
 from app.domain.chunking import RawSection
 from app.domain.errors import UnparsableDocumentError
 from app.domain.models import Document
+from app.domain.versioning import make_document_id
 
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n(.*)$", re.DOTALL)
 HEADER_RE = re.compile(r"^#{1,6}\s+.*$", re.MULTILINE)
@@ -28,7 +29,9 @@ class MarkdownParser:
 
         try:
             document = Document(
-                id=f"{metadata['product_ref']}::{document_type}",
+                id=make_document_id(
+                    str(metadata["product_ref"]), document_type, str(metadata["version"])
+                ),
                 title=str(metadata["title"]),
                 product_ref=str(metadata["product_ref"]),
                 version=str(metadata["version"]),

@@ -1161,6 +1161,15 @@ git commit -m "feat: add answer_query use case (hybrid retrieval + confidence ga
 
 ## Task 10: Application Use Case — `ingest_document`
 
+> **Partially superseded — see migration `0003_versioned_document_key.py`.** Two
+> changes: document ids now come from `make_document_id(product_ref, document_type,
+> version)` (`domain/versioning.py`) instead of being assembled inline from
+> `product_ref` and `document_type`; and `registry.register(document)` runs *before*
+> the chunks are indexed, because `chunks.document_id` is now a foreign key. The
+> `delete_by_document_id` calls on the `updated` path therefore clear only the
+> incoming version's own chunks — earlier versions' chunks are kept and marked
+> `deprecated`, which is what the spec's audit rule asks for.
+
 **Files:**
 - Create: `app/application/use_cases/ingest_document.py`
 - Test: `tests/unit/test_ingest_document.py`
@@ -2135,6 +2144,13 @@ git commit -m "feat: add local cross-encoder reranker"
 > column; `0001`'s `downgrade()` no longer drops the extension. `docker-compose.yml`
 > is also Postgres-only — the `app` service described in Task 1 declared `build: .`
 > with no Dockerfile in the repo, which broke `docker compose up` outright.
+>
+> **Also superseded by `0003_versioned_document_key.py`.** The composite
+> `(product_ref, document_type)` primary key could only hold a document's *current*
+> version, so the spec's audit rule was unimplementable. `documents` now has a
+> surrogate, version-scoped `id` with a unique constraint on
+> `(product_ref, document_type, version)`, and `chunks.document_id` is a real
+> foreign key onto it (`ON DELETE CASCADE`).
 
 **Files:**
 - Create: `app/infrastructure/postgres/__init__.py`
@@ -2753,6 +2769,14 @@ git commit -m "feat: add tsvector-backed LexicalSearchPort implementation"
 ---
 
 ## Task 19: Infrastructure — Postgres Document Registry (Testcontainers)
+
+> **Partially superseded — see migration `0003_versioned_document_key.py`.**
+> `register()` looked the row up by `(product_ref, document_type)` and overwrote
+> `version`/`status`/`content_hash` in place, so a new version destroyed its
+> predecessor. It now keys on the version-scoped `document.id`: a new version
+> inserts a new row and leaves the previous one behind as `deprecated`.
+> `get_active_hash()` is correspondingly a filtered `select(...)` on
+> `status = 'active'` rather than a primary-key `get()`.
 
 **Files:**
 - Create: `app/infrastructure/postgres/document_registry.py`

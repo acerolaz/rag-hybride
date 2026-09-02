@@ -72,7 +72,10 @@ app/
 
 - `Document`: `id`, `title`, `product_ref`, `version`, `status` (`active`/`deprecated`),
   `document_type` (`datasheet`/`manuel`/`procedure_sav`), `published_date`,
-  `source_path`/`url`, `content_hash`.
+  `source_path`/`url`, `content_hash`. `id` identifies one *version* —
+  `make_document_id(product_ref, document_type, version)` in `domain/versioning.py`
+  is its single source of truth. A version-less id cannot satisfy the audit rule
+  below: re-ingesting would overwrite the previous document row.
 - `Chunk`: `id`, `document_id`, `content`, `content_type` (`text`/`table`), and all of the
   above document metadata denormalized onto the chunk (required, not optional — every
   chunk must be self-describing for citation).
@@ -195,6 +198,11 @@ app/
 - `chunks.search_vector` is a Postgres STORED generated column, indexed with GIN;
   `chunks.embedding` is indexed with HNSW using `vector_cosine_ops`, matching the
   cosine ordering the dense repository queries with.
+- `documents` is keyed by the surrogate, version-scoped `id`, under a unique
+  constraint on `(product_ref, document_type, version)` — one row per version, so a
+  superseded version survives as its own `deprecated` row. `chunks.document_id` is a
+  foreign key onto it (`ON DELETE CASCADE`), which is why `ingest_document` registers
+  the document before indexing its chunks.
 - Azure OpenAI reached via environment variables (`AZURE_OPENAI_*`), loaded through
   `pydantic-settings`; `.env` is gitignored, `.env.example` documents the expected keys
   (`AZURE_OPENAI_*`, `DATABASE_URL`) with no real values.

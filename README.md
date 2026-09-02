@@ -236,6 +236,21 @@ alembic downgrade -1                                # annule la dernière
 |---|---|---|
 | `chunks.search_vector` | GIN | Recherche lexicale (BM25) — colonne générée `STORED` par Postgres depuis `content` |
 | `chunks.embedding` | HNSW `vector_cosine_ops` | Recherche dense — même métrique que `cosine_distance()` côté repository |
+| `chunks.document_id` | FK → `documents.id` (`ON DELETE CASCADE`) | Rattache chaque chunk à la **version** de document dont il provient |
+
+### Versionnement des documents
+
+`documents` est identifiée par une clé de substitution `id`, propre à une version
+(`make_document_id(product_ref, document_type, version)` dans `domain/versioning.py`),
+sous contrainte d'unicité `(product_ref, document_type, version)`.
+
+Conséquence : réingérer une nouvelle version **n'écrase pas** l'ancienne — celle-ci
+reste en base avec `status = 'deprecated'`, ses chunks aussi. C'est ce qui rend
+l'exigence d'auditabilité tenable ; une clé `(product_ref, document_type)` ne pouvait
+héberger que la version courante.
+
+Le retrieval ne filtre que sur `status = 'active'`, les versions périmées restent donc
+invisibles des réponses tout en étant conservées.
 
 Les tests d'intégration (`tests/integration/test_migrations.py`) exécutent réellement
 `alembic upgrade head` sur un conteneur pgvector : une révision cassée fait échouer la
