@@ -72,6 +72,19 @@ def chunk_sections(sections: list[RawSection]) -> list[ChunkCandidate]:
         if buffer_tokens >= MIN_CHUNK_TOKENS:
             flush_buffer()
 
+    # Avoid emitting a trailing undersized text chunk (< MIN_CHUNK_TOKENS) when possible.
+    if buffer and buffer_tokens < MIN_CHUNK_TOKENS:
+        for i in range(len(chunks) - 1, -1, -1):
+            if (
+                chunks[i].content_type == "text"
+                and estimate_tokens(chunks[i].content) + buffer_tokens <= MAX_CHUNK_TOKENS
+            ):
+                merged = chunks[i].content + "\n\n" + "\n\n".join(buffer)
+                chunks[i] = ChunkCandidate(content=merged, content_type="text")
+                buffer = []
+                buffer_tokens = 0
+                break
+
     flush_buffer()
     return chunks
 
