@@ -8,7 +8,7 @@ from app.domain.errors import UnparsableDocumentError
 from app.domain.models import Document
 from app.domain.versioning import make_document_id
 
-FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n(.*)$", re.DOTALL)
+FRONTMATTER_RE = re.compile(r"^---\r?\n(.*?)\r?\n---\r?\n(.*)$", re.DOTALL)
 HEADER_RE = re.compile(r"^#{1,6}\s+.*$", re.MULTILINE)
 
 
