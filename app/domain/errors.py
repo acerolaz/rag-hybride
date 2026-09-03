@@ -7,4 +7,4 @@ class UnsupportedFormatError(Exception):
 
 
 class EmbeddingServiceError(Exception):
-    """Raised when the embedding provider fails to return a vector."""
+    """Raised when an Azure OpenAI call (embeddings or chat completions) fails."""
