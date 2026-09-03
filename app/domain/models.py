@@ -7,6 +7,7 @@ class Citation:
     title: str
     product_ref: str
     published_date: date
+    document_type: str
     url: str | None = None
 
 

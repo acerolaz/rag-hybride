@@ -11,6 +11,7 @@ class CitationResponse(BaseModel):
     title: str
     product_ref: str
     published_date: str
+    document_type: str
 
 
 class QueryResponse(BaseModel):

@@ -68,6 +68,7 @@ class AnswerQueryUseCase:
                 title=c.title,
                 product_ref=c.product_ref,
                 published_date=c.published_date,
+                document_type=c.document_type,
                 url=c.source_path,
             )
             for c in cited_chunks

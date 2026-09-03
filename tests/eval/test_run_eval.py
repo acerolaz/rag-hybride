@@ -46,7 +46,7 @@ async def test_evaluate_pipeline_computes_hit_rate_at_1_for_reference_exacte():
     ]
     from datetime import date
 
-    citation = Citation(title="t", product_ref="REF-1", published_date=date(2026, 1, 1))
+    citation = Citation(title="t", product_ref="REF-1", published_date=date(2026, 1, 1), document_type="datasheet")
     use_case = FakeUseCase({"q1": Answer(text="ok", citations=[citation], confidence="high")})
 
     # Act

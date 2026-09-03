@@ -23,7 +23,7 @@ async def test_query_route_returns_citations_on_high_confidence():
     answer = Answer(
         text="Réponse.",
         citations=[
-            Citation(title="Fiche REF-1", product_ref="REF-1", published_date=date(2026, 1, 1))
+            Citation(title="Fiche REF-1", product_ref="REF-1", published_date=date(2026, 1, 1), document_type="manuel")
         ],
         confidence="high",
     )

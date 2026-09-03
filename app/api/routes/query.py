@@ -24,6 +24,7 @@ async def query_documents(
                 title=c.title,
                 product_ref=c.product_ref,
                 published_date=c.published_date.isoformat(),
+                document_type=c.document_type,
             )
             for c in answer.citations
         ],

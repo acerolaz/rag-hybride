@@ -38,10 +38,11 @@ async def evaluate_pipeline(
         reciprocal_ranks = 0.0
         for q in couverte:
             answer = await use_case.execute(q["question"])
-            product_refs = [c.product_ref for c in answer.citations[:5]]
-            if product_refs:
+            document_types = [c.document_type for c in answer.citations[:5]]
+            expected_type = q["expected_document_type"]
+            if expected_type in document_types:
                 recall_hits += 1
-                reciprocal_ranks += 1.0 / 1  # single generated answer per query in this MVP harness
+                reciprocal_ranks += 1.0 / (document_types.index(expected_type) + 1)
         metrics["recall_at_5"] = recall_hits / len(couverte)
         metrics["mrr"] = reciprocal_ranks / len(couverte)
 
