@@ -88,11 +88,12 @@ class IngestDocumentUseCase:
             for candidate in chunk_candidates
         ]
 
+        embeddings = [await self.embedding_port.embed(chunk.content) for chunk in chunks]
+
         # The document row must exist before its chunks: `chunks.document_id`
         # is a foreign key onto it.
         await self.registry.register(document)
 
-        embeddings = [await self.embedding_port.embed(chunk.content) for chunk in chunks]
         await self.vector_store.upsert(chunks, embeddings)
         await self.lexical_search.upsert(chunks)
 
