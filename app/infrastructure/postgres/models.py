@@ -90,6 +90,6 @@ class ChunkRow(Base):
     # cannot drift from `content` the way a hand-written assignment can.
     search_vector: Mapped[str | None] = mapped_column(
         TSVECTOR,
-        Computed("to_tsvector('french'::regconfig, content)", persisted=True),
+        Computed(f"to_tsvector('{TSVECTOR_CONFIG}'::regconfig, content)", persisted=True),
         nullable=True,
     )
