@@ -8,8 +8,14 @@ import pdfplumber
 from app.domain.chunking import RawSection
 from app.domain.errors import UnparsableDocumentError
 from app.domain.models import Document
+from app.domain.versioning import make_document_id
 
 HEADING_SIZE_RATIO = 1.15
+
+# A PDF carries no frontmatter, so there is no version to read from it. Every
+# ingested PDF is therefore version "1" and re-ingesting one updates that same
+# version in place rather than creating a superseded row.
+PDF_DEFAULT_VERSION = "1"
 
 
 class PdfParser:
@@ -31,10 +37,10 @@ class PdfParser:
             raise UnparsableDocumentError(f"no extractable content in {source_path}")
 
         document = Document(
-            id=f"{source_path}::{document_type}",
+            id=make_document_id(source_path, document_type, PDF_DEFAULT_VERSION),
             title=title,
             product_ref=source_path,
-            version="1",
+            version=PDF_DEFAULT_VERSION,
             status="active",
             document_type=document_type,
             published_date=date.today(),

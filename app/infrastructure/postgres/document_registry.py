@@ -1,4 +1,4 @@
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.models import Document
@@ -10,16 +10,26 @@ class PostgresDocumentRegistry:
         self._session = session
 
     async def get_active_hash(self, product_ref: str, document_type: str) -> str | None:
-        row = await self._session.get(DocumentRow, (product_ref, document_type))
-        return row.content_hash if row is not None and row.status == "active" else None
+        # Several versions of the same document may coexist; at most one of
+        # them is active, so this cannot be a primary-key lookup.
+        result = await self._session.execute(
+            select(DocumentRow.content_hash)
+            .where(DocumentRow.product_ref == product_ref)
+            .where(DocumentRow.document_type == document_type)
+            .where(DocumentRow.status == "active")
+        )
+        return result.scalar_one_or_none()
 
     async def register(self, document: Document) -> None:
-        row = await self._session.get(DocumentRow, (document.product_ref, document.document_type))
+        # Keyed by the version-scoped document id: a new version inserts a new
+        # row and leaves the previous one in place, while re-registering the
+        # same version updates it.
+        row = await self._session.get(DocumentRow, document.id)
         if row is None:
-            row = DocumentRow(
-                product_ref=document.product_ref, document_type=document.document_type
-            )
+            row = DocumentRow(id=document.id)
             self._session.add(row)
+        row.product_ref = document.product_ref
+        row.document_type = document.document_type
         row.title = document.title
         row.version = document.version
         row.status = "active"

@@ -12,7 +12,7 @@ from app.domain.ports import (
     LexicalSearchPort,
     VectorStorePort,
 )
-from app.domain.versioning import resolve_ingest_action
+from app.domain.versioning import make_document_id, resolve_ingest_action
 
 
 @dataclass
@@ -48,7 +48,7 @@ class IngestDocumentUseCase:
             document = replace(
                 document,
                 product_ref=product_ref_override,
-                id=f"{product_ref_override}::{document_type}",
+                id=make_document_id(product_ref_override, document_type, document.version),
             )
         document = replace(document, content_hash=content_hash)
 
@@ -61,6 +61,10 @@ class IngestDocumentUseCase:
             return IngestResult(document_id=document.id, chunk_count=0, status="unchanged")
 
         if action == "updated":
+            # Clears only this version's own chunks, so re-ingesting a version
+            # is idempotent. Chunks of *earlier* versions carry a different
+            # document_id and survive — `deprecate` marks them superseded
+            # rather than deleting them, which is what keeps an audit trail.
             await self.vector_store.delete_by_document_id(document.id)
             await self.lexical_search.delete_by_document_id(document.id)
             await self.registry.deprecate(document.product_ref, document.document_type)
@@ -85,8 +89,12 @@ class IngestDocumentUseCase:
         ]
 
         embeddings = [await self.embedding_port.embed(chunk.content) for chunk in chunks]
+
+        # The document row must exist before its chunks: `chunks.document_id`
+        # is a foreign key onto it.
+        await self.registry.register(document)
+
         await self.vector_store.upsert(chunks, embeddings)
         await self.lexical_search.upsert(chunks)
-        await self.registry.register(document)
 
         return IngestResult(document_id=document.id, chunk_count=len(chunks), status=action)

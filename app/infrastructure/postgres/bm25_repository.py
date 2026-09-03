@@ -17,7 +17,9 @@ class Bm25Repository:
                 row = ChunkRow(id=chunk.id)
                 self._session.add(row)
             apply_chunk_fields(row, chunk)
-            row.search_vector = func.to_tsvector("french", chunk.content)
+            # `search_vector` is a STORED generated column (migration 0002):
+            # Postgres derives it from `content`. Assigning it here would be
+            # rejected outright.
 
     async def search(
         self, query: str, top_k: int, product_ref: str | None = None

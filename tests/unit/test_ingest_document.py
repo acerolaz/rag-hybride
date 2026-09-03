@@ -7,11 +7,12 @@ from app.application.use_cases.ingest_document import IngestDocumentUseCase
 from app.domain.chunking import RawSection
 from app.domain.errors import UnsupportedFormatError
 from app.domain.models import Document
+from app.domain.versioning import make_document_id
 
 
 def make_document(product_ref: str) -> Document:
     return Document(
-        id=product_ref,
+        id=make_document_id(product_ref, "datasheet", "1"),
         title=f"Fiche {product_ref}",
         product_ref=product_ref,
         version="1",
@@ -157,7 +158,8 @@ async def test_changed_hash_deprecates_old_version_before_reindexing():
     # Assert
     assert result.status == "updated"
     assert registry.deprecated == [("REF-3", "datasheet")]
-    assert vector_store.deleted == ["REF-3"]
+    # Only this version's own chunks are cleared; earlier versions keep theirs.
+    assert vector_store.deleted == [make_document_id("REF-3", "datasheet", "1")]
 
 
 @pytest.mark.asyncio
@@ -172,7 +174,11 @@ async def test_two_document_types_with_same_product_ref_both_created():
             return None
 
     datasheet_document = make_document("REF-9")
-    manuel_document = replace(make_document("REF-9"), document_type="manuel", id="REF-9::manuel")
+    manuel_document = replace(
+        make_document("REF-9"),
+        document_type="manuel",
+        id=make_document_id("REF-9", "manuel", "1"),
+    )
     registry = MultiTypeRegistry()
 
     datasheet_use_case = IngestDocumentUseCase(
