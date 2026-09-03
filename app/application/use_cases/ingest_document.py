@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import uuid
 from dataclasses import dataclass, replace
@@ -88,7 +89,9 @@ class IngestDocumentUseCase:
             for candidate in chunk_candidates
         ]
 
-        embeddings = [await self.embedding_port.embed(chunk.content) for chunk in chunks]
+        embeddings = await asyncio.gather(
+            *[self.embedding_port.embed(chunk.content) for chunk in chunks]
+        )
 
         # The document row must exist before its chunks: `chunks.document_id`
         # is a foreign key onto it.
