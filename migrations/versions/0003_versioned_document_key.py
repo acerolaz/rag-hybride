@@ -59,6 +59,14 @@ def upgrade() -> None:
         "documents",
         ["product_ref", "document_type", "status"],
     )
+    # Ensure at most one active version per (product_ref, document_type) pair
+    op.create_index(
+        "uq_documents_ref_type_active",
+        "documents",
+        ["product_ref", "document_type"],
+        unique=True,
+        postgresql_where="status = 'active'",
+    )
     op.create_foreign_key(
         "fk_chunks_document_id_documents",
         "chunks",
@@ -71,6 +79,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_constraint("fk_chunks_document_id_documents", "chunks", type_="foreignkey")
+    op.drop_index("uq_documents_ref_type_active", table_name="documents")
     op.drop_index("ix_documents_ref_type_status", table_name="documents")
     op.drop_constraint("uq_documents_product_ref_document_type_version", "documents")
 

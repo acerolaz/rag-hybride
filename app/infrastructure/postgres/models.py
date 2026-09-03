@@ -2,7 +2,7 @@ from datetime import date
 from typing import Annotated
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Computed, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import Computed, ForeignKey, Index, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -35,6 +35,16 @@ class DocumentRow(Base):
         # Serves the registry's hot lookup: the active version of one
         # product's document of a given type.
         Index("ix_documents_ref_type_status", "product_ref", "document_type", "status"),
+        # Ensures at most one active version per (product_ref, document_type)
+        # pair; prevents scalar_one_or_none() from raising when multiple active
+        # versions exist (e.g., from concurrent ingests).
+        Index(
+            "uq_documents_ref_type_active",
+            "product_ref",
+            "document_type",
+            postgresql_where=text("status = 'active'"),
+            unique=True,
+        ),
     )
 
     id: Mapped[PrimaryKeyStr]
