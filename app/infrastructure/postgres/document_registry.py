@@ -38,15 +38,29 @@ class PostgresDocumentRegistry:
         row.content_hash = document.content_hash
 
     async def deprecate(self, product_ref: str, document_type: str) -> None:
-        await self._session.execute(
-            update(DocumentRow)
+        # Find the currently active version to deprecate.
+        # There is at most one active version per (product_ref, document_type)
+        # due to the unique partial index.
+        result = await self._session.execute(
+            select(DocumentRow.id)
             .where(DocumentRow.product_ref == product_ref)
             .where(DocumentRow.document_type == document_type)
+            .where(DocumentRow.status == "active")
+        )
+        active_document_id = result.scalar_one_or_none()
+        if active_document_id is None:
+            return  # No active version to deprecate
+        
+        # Mark only the active document as deprecated
+        await self._session.execute(
+            update(DocumentRow)
+            .where(DocumentRow.id == active_document_id)
             .values(status="deprecated")
         )
+        
+        # Mark only chunks from that document as deprecated
         await self._session.execute(
             update(ChunkRow)
-            .where(ChunkRow.product_ref == product_ref)
-            .where(ChunkRow.document_type == document_type)
+            .where(ChunkRow.document_id == active_document_id)
             .values(status="deprecated")
         )

@@ -257,7 +257,16 @@ def test_two_versions_of_one_document_coexist_but_a_duplicate_version_does_not(
     command.upgrade(_alembic_config(migration_db_url), "head")
     asyncio.run(_execute(migration_db_url, INSERT_DOCUMENT))
 
-    # Act — a second version of the same document
+    # Act — mark v1 as deprecated before inserting v2 (mimicking the `deprecate` operation)
+    asyncio.run(
+        _execute(
+            migration_db_url,
+            sa.text(
+                "UPDATE documents SET status = 'deprecated' WHERE product_ref = 'REF-8842' AND status = 'active'"
+            ),
+        )
+    )
+    # Act — insert a second version of the same document
     asyncio.run(_execute(migration_db_url, INSERT_DOCUMENT_V2))
 
     # Assert — both on record
