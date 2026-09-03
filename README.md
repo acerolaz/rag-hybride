@@ -148,15 +148,15 @@ flowchart LR
 
 ## 6. Évaluation E6
 
-Jeu de test `questions_rag.jsonl` (30 questions, 3 catégories) → une **métrique par catégorie** :
+Jeu de test `questions_rag.jsonl` (13 questions, 3 catégories — ensemble MVP) → une **métrique par catégorie** :
 
 | Catégorie | Teste | Métrique | Ce que l'hybride améliore |
 |---|---|---|---|
-| `reference_exacte` (8 q.) | Bon `doc_id` pour une REF exacte | **Hit Rate@1** | BM25 rattrape le semantic gap |
-| `couverte` (14 q.) | Bon type de doc en langage naturel | **Recall@5** + **MRR** | Reranking affine le classement |
-| `hors_corpus` (8 q.) | Refus correct plutôt qu'hallucination | **Taux de refus correct** | Score reranker = signal de confiance exploitable |
+| `reference_exacte` (4 q.) | Bon `doc_id` pour une REF exacte | **Hit Rate@1** | BM25 rattrape le semantic gap |
+| `couverte` (5 q.) | Bon type de doc en langage naturel | **Recall@5** + **MRR** | Reranking affine le classement |
+| `hors_corpus` (4 q.) | Refus correct plutôt qu'hallucination | **Taux de refus correct** | Score reranker = signal de confiance exploitable |
 
-**Protocole** : mêmes 30 questions sur **Pipeline A** (dense seul, baseline « standard vector search ») vs **Pipeline B** (Dense + BM25 + RRF + reranking) → delta documenté par catégorie.
+**Protocole** : mêmes 13 questions sur **Pipeline A** (dense seul, baseline « standard vector search ») vs **Pipeline B** (Dense + BM25 + RRF + reranking) → delta documenté par catégorie.
 
 ---
 
