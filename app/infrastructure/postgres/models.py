@@ -5,6 +5,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import Computed, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import literal_column
 
 EMBEDDING_DIM = 1536
 
@@ -35,6 +36,15 @@ class DocumentRow(Base):
         # Serves the registry's hot lookup: the active version of one
         # product's document of a given type.
         Index("ix_documents_ref_type_status", "product_ref", "document_type", "status"),
+        # Enforce only one active version per (product_ref, document_type) to prevent
+        # concurrent ingests from leaving multiple active documents.
+        Index(
+            "uq_documents_active_ref_type",
+            "product_ref",
+            "document_type",
+            unique=True,
+            postgresql_where=literal_column("status = 'active'"),
+        ),
     )
 
     id: Mapped[PrimaryKeyStr]
