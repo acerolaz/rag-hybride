@@ -8,9 +8,9 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 EMBEDDING_DIM = 1536
 
-# Text search configuration used for the lexical (BM25-style) index. Declared
-# once here so the generated column, its GIN index and the query-time
-# `plainto_tsquery` in Bm25Repository can never drift apart.
+# Text search configuration used for the lexical (BM25-style) index.
+# Used by the generated `chunks.search_vector` column and its GIN index; keep
+# Bm25Repository's `plainto_tsquery(...)` configuration aligned with this value.
 TSVECTOR_CONFIG = "french"
 
 PrimaryKeyStr = Annotated[str, mapped_column(String, primary_key=True)]
